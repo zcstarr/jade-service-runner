@@ -12,6 +12,7 @@ import { ActiveServiceSpec } from "./service";
 
 import { makeLogger } from "./logging";
 import { EventEmitter } from "events";
+import * as events from "./events";
 export interface ServiceOptions {
   intervalMS: number;
 }
@@ -20,20 +21,43 @@ const logger = makeLogger("ServiceRunner", "ServiceManager");
 /*
  * ServiceManager provide a high level interface, to launch and list running services from.
 */
+type ServiceNotifications = NewServiceNotification | TerminatedServiceNotification;
+
+interface ServiceNotification {
+  env: string;
+  version: string;
+  name: string;
+  rpcPort: string;
+  protocol: string;
+}
+
+interface NewServiceNotification extends ServiceNotification {
+  type: "newService";
+}
+
+interface TerminatedServiceNotification extends ServiceNotification {
+  type: "terminatedService";
+}
+
 export class ServiceManager {
 
   public repo: Repo;
   public config: Config;
   public options: ServiceOptions | undefined;
   public manager: ServiceProcessManager;
+  public notifications: events.ExternalServiceNotifications;
 
   constructor(repo: Repo, config: Config, options?: ServiceOptions) {
     this.repo = repo;
     this.config = config;
     this.options = options;
     this.manager = new ServiceProcessManager();
-  }
+    this.notifications = new EventEmitter();
 
+    // setup external service notifications that with an abstraction away from the process manager's external events
+    this.manager.subscribe("launched", (notification) => { this.notifications.emit("launched", notification); });
+    this.manager.subscribe("terminated", (notification) => { this.notifications.emit("terminated", notification); });
+  }
   /**
    * Starts an installed service using the service configuration and manifest entry, and
    * returns service configuration information.

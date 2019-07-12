@@ -23,7 +23,8 @@ interface IDynamicPorts {
   DYNAMIC_UDP_PORT_2: number;
   DYNAMIC_UDP_PORT_3: number;
 }
-type Protocol = "udp" | "tcp";
+
+export type Protocol = "udp" | "tcp" | "ws" | "http" | "https" | "wss";
 const SOCKET_CONNECTIVITY_TIMEOUT = 5000;
 /**
  * Returns true or false if port cannot be connected to. For services support RPC discover
@@ -53,6 +54,8 @@ export async function isUp(port: number, protocol: Protocol): Promise<boolean> {
       } catch (e) {
         return true;
       }
+    default:
+        throw new Error("Unsupported healthcheck protocol");
   }
 }
 
@@ -100,7 +103,7 @@ export async function getFreePorts(): Promise < IDynamicPorts > {
  *
  * @returns a free TCP Port
  */
-export const getAvailableTCPPort = (testPort: number = 0) => new Promise((resolve, reject) => {
+export const getAvailableTCPPort = (testPort: number = 0): Promise<number> => new Promise((resolve, reject) => {
   const server = net.createServer();
   server.on("error", reject);
   server.listen(testPort, () => {

@@ -4,6 +4,10 @@ import { Config } from "../lib/config";
 import { makeLogger } from "../lib/logging";
 import { Command } from "commander";
 import { ServiceRunnerServer } from "../";
+import { ProxyServer } from "../lib/proxyServer";
+import { getAvailableTCPPort } from "../lib/util";
+import { Router } from "../lib/router";
+import { ConnectionInfo } from "../lib/connection";
 const logger = makeLogger("ServiceRunner", "Commands");
 
 interface ParsedCommands {
@@ -30,9 +34,17 @@ const testConfiguration = async (extendedConfig: any) => {
 };
 
 const launchCommands = async ({port, dir, extendedConfig}: ParsedCommands) => {
-    const serviceRunnerServer = new ServiceRunnerServer(extendedConfig, dir, port);
-    logger.info(`Service Runner starting on ${port}`);
-    const started = serviceRunnerServer.start();
+    const availablePort = await getAvailableTCPPort();
+    const serviceRunnerServer = new ServiceRunnerServer(extendedConfig, dir, `${availablePort}`);
+    const router = new Router(serviceRunnerServer.serviceManager.notifications);
+
+    const connections = new Set<ConnectionInfo>([{ host: "localhost", port: parseInt(port, 10), protocol: "http" }]);
+    const proxy = new ProxyServer(connections, router);
+    logger.info(`Service Runner port starting on ${port}`);
+    logger.debug(`Service Runner internal port starting on ${availablePort}`);
+    await serviceRunnerServer.start();
+    proxy.addServiceRunner(availablePort);
+    const started = proxy.start();
     logger.info(`Service Runner started on ${port}`);
     return started;
 };

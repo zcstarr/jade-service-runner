@@ -40,8 +40,10 @@ export const methods = (installer: Installer, serviceManager: ServiceManager): S
       return true;
     },
     listInstalledServices: async () => {
+      logger.debug("listing installed services");
       const mf = await installer.repo.getManifest();
       if (mf.services === undefined) { return []; }
+      logger.debug("got services and returning");
       return mf.services.map((service) => ({ name: service.name, version: service.version }));
     },
 

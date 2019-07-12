@@ -14,6 +14,7 @@ import { kill } from "process";
 import { renderService } from "./serviceTemplate";
 import { makeLogger } from "./logging";
 import * as util from "./util";
+import { EventEmitter } from "events";
 
 const logger = makeLogger("ServiceRunner", "ServiceProcessManager");
 /**
@@ -89,6 +90,7 @@ export class ServiceProcessManager {
 
   public serviceCache: Map<string, ServiceSpec>;
   public activeServiceCache: Map<string, ActiveServiceSpec>;
+  private externalNotifications: events.ExternalServiceNotifications;
   private notifications: events.EventBus;
   private healthCache: Map<number, Health>;
   constructor() {
@@ -96,6 +98,11 @@ export class ServiceProcessManager {
     this.activeServiceCache = new Map<string, ActiveServiceSpec>();
     this.healthCache = new Map<number, Health>();
     this.notifications = new events.EventBus(this.processServiceEvents.bind(this));
+    this.externalNotifications = new EventEmitter();
+  }
+
+  public subscribe(type: "launched" | "terminated", handler: (notify: events.ExternalServiceNotification) => void) {
+    this.externalNotifications.on(type, handler);
   }
 
   /**
@@ -200,6 +207,9 @@ export class ServiceProcessManager {
     this.cleanupService(service);
     const relaunchDelay = service.health ? service.health.interval : DEFAULT_SERVICE_RESTART_DELAY;
     service.notifications.emit("stopped", service);
+    const {rpcPort, env, version, name } = service;
+    // TODO require protocol needs protocol
+    this.externalNotifications.emit("terminated", { protocol: "http", rpcPort, env, version, name });
     setTimeout(() => {
       const serviceSpec = this.serviceCache.get(serviceID) as ServiceSpec;
       this.notifications.emit({ name: "pending", service: serviceSpec });
@@ -231,6 +241,9 @@ export class ServiceProcessManager {
     service.process = child;
     this.setServiceCacheEntry(service, "running");
     service.notifications.emit("launched", service);
+    // TODO require protocol needs protocol
+    const {rpcPort, env, version, name } = service;
+    this.externalNotifications.emit("launched", { protocol: "http", rpcPort, env, version, name });
     this.sendHealthEvent(service);
   }
 
