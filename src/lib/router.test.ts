@@ -18,7 +18,7 @@ describe("Should test router", () => {
     notifications.emit("launched", testService);
     const routeInfo = router.resolve("/test-service/test-env/1.0.0");
     expect(routeInfo).toBeDefined();
-    expect(routeInfo.port).toBe("5000");
+    expect(routeInfo.port).toBe(5000);
     notifications.emit("terminated", testService);
     expect(() => router.resolve("/test-service/test-env/1.0.0")).toThrowError(/^.*Service could not be found.*$/);
   });

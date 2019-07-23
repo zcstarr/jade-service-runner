@@ -1,5 +1,5 @@
 import path from "path";
-import { ensureDirSync, createReadStream, createWriteStream } from "fs-extra";
+import { copyFile, ensureDirSync, createReadStream, createWriteStream } from "fs-extra";
 import { mkdir } from "fs";
 import { Readable, Writable, Transform } from "stream";
 import { promisify } from "util";
@@ -10,6 +10,8 @@ import request from "request";
 import net, { AddressInfo } from "net";
 import dgram, { Socket } from "dgram";
 import { makeLogger } from "./logging";
+import url from "url";
+
 const logger = makeLogger("ServiceRunner", "Util");
 
 const fsMkdir = promisify(mkdir);
@@ -162,10 +164,25 @@ export const getOS = (): OSTypes => {
  * @param timeout - Timeout of the 2min for the download resource before failure
  * @returns The config of a service scoped by OS and service name
  */
-export const downloadAsset = async (uri: string, dir: string,
-                                    name: string, timeout: number = 120000): Promise<string> => {
+export const downloadAsset = async (assetURI: string, dir: string, timeout: number = 120000): Promise<string> => {
+  const uri = url.parse(assetURI);
+  if (uri === undefined || uri.pathname === undefined) {
+    const err = new Error(`Could not parse download url`);
+    logger.error(err);
+    throw err;
+  }
+
+  const pathParts = uri.pathname.split("/");
+  const tailPart = pathParts.pop();
+  let fileName = "";
+  if (tailPart) { fileName = tailPart; }
   await fsMkdir(dir, { recursive: true });
-  const downloadPath = `${dir}/${name}`;
+  const downloadPath = `${dir}/${fileName}`;
+
+  if (uri.protocol === "file:") {
+    await copyFile(uri.pathname, downloadPath);
+    return downloadPath;
+  }
   return new Promise((resolve: (p: string) => void, reject) => {
     const file = createWriteStream(downloadPath);
     file.on("finish", () => {

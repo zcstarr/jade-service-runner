@@ -94,9 +94,9 @@ export class ServiceManager {
 
     return new Promise((resolve) => {
       logger.debug(`Launching ${service.name} in ${service.env}`);
-      service.notifications.once("launched", (svc) => {
-        logger.debug(`Launched ${svc.name} in ${svc.env}`);
-        resolve(svc);
+      service.notifications.once("launched", (svcDesc) => {
+        logger.debug(`Launched ${svcDesc.name} in ${svcDesc.env}`);
+        resolve(svcDesc);
       });
       this.manager.launchService(service);
     });

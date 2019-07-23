@@ -51,12 +51,11 @@ describe("Frontend allows for a connection", () => {
         if (data.protocol === "http") {
           const res = await backendClient.conn.send(data.payload.body, data.payload.headers, data.payload.method);
           res.on("data", (d) => {
-            const rlt = JSON.parse(d);
-            connResponse.emit("response", rlt);
+            connResponse.emit("response", d);
           });
         }
       });
-      const result = await fetch(`http://localhost:${tcpPort}/`, { 
+      const result = await fetch(`http://localhost:${tcpPort}/`, {
         headers: {
           path: "/",
         },
