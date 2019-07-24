@@ -1,11 +1,9 @@
-import WebSocket from "http";
-import fetch, {Headers } from "node-fetch";
-import { HttpConnection, ConnectionInfo, ResponseBus } from "../connection";
+import { HttpConnection, ConnectionInfo, ResponseBus, connectionError } from "../connection";
 import http from "http";
 import { makeLogger } from "../logging";
-import { HttpBackend } from "./types";
+import { HttpDataResponse } from "../connectionManager";
 const logger = makeLogger("ServiceRunner", "HttpBackend");
-export const httpBackend = async (connectionInfo: ConnectionInfo, response: ResponseBus): Promise<HttpConnection> => {
+export const httpBackend = async (connectionInfo: ConnectionInfo, response: ResponseBus<HttpDataResponse>): Promise<HttpConnection> => {
     const { host, port } = connectionInfo;
     const send = (data: any , headers: http.IncomingHttpHeaders, method: string): Promise<http.IncomingMessage> => {
       return new Promise((resolve) => {
@@ -17,11 +15,14 @@ export const httpBackend = async (connectionInfo: ConnectionInfo, response: Resp
           logger.debug(`returning a response`);
           resolve(res);
         });
+        request.on("error", (err) => {
+          response.emit("error", connectionError(502, "Request failure", err, logger));
+        });
         request.write(JSON.stringify(data));
         request.end();
       });
   };
-    const respond = (data: any) => {
+    const respond = (data: HttpDataResponse) => {
     response.emit("response", data);
   };
     return {

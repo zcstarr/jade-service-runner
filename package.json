@@ -92,5 +92,9 @@
     "!build/*.test.*",
     "!build/generated-client"
   ],
-  "homepage": "https://github.com/etclabscore/jade-service-runner#readme"
+  "homepage": "https://github.com/etclabscore/jade-service-runner#readme",
+  "optionalDependencies": {
+    "bufferutil": "^4.0.1",
+    "utf-8-validate": "^5.0.2"
+  }
 }

@@ -113,7 +113,7 @@ describe("ServiceManager", () => {
       const serviceConfig = await createTestService();
       const { service } = serviceConfig;
       const restartSeq: TransitionType[] = ["stopped", "pending", "launched"];
-
+      // Note we must account for launch stability check
       const healthSeq = [true];
       const hc = healthCheck(healthSeq);
 
@@ -135,10 +135,10 @@ describe("ServiceManager", () => {
     }
   }, 10000);
 
-  it("should handle health check failure and reboot service", async () => {
+  it.only("should handle health check failure and reboot service", async () => {
     // The health check sequence should result in a successful run then failure and reboot
 
-    const healthSeq = [true, true, false, false, true];
+    const healthSeq = [true, true, true, false, false, true];
     const hc = healthCheck(healthSeq);
     // being bad here and shimming the mock in
     // @ts-ignore
@@ -157,5 +157,5 @@ describe("ServiceManager", () => {
         }, 2000);
       });
     }
-  }, 10000);
+  }, 30000);
 });

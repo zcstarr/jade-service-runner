@@ -24,4 +24,3 @@ export const startServiceRunner = async (connections: Set<ConnectionInfo>, dir: 
     logger.info(`Service Runner started on ${port}`);
     return serviceRunnerServer;
 };
-

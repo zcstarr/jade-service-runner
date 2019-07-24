@@ -3,6 +3,8 @@ import http, { IncomingMessage } from "http";
 import https from "https";
 import { Socket } from "net";
 import { EventEmitter } from "events";
+import { makeLogger } from "./logging";
+const logger = makeLogger("ServiceRunner", "WebSocketProxyServer");
 interface ServerReq {
   server: http.Server | https.Server;
 }
@@ -21,13 +23,19 @@ export class WebSocketProxyServer extends WebSocket.Server {
       error: this.emit.bind(this, "error"),
       upgrade: (req: IncomingMessage, socket: Socket, head: Buffer) => {
         this.socketID++;
+        this.once("terminateConnection", (err) => {
+            this.handleUpgrade(req, socket, head, (ws) => {
+              logger.error(`terminating connection early: ${err.error.stack}`);
+              ws.close(4000 + err.statusCode, JSON.stringify(err));
+            });
+        });
         this.once("upgraded", (socketID, backend) => {
           this.handleUpgrade(req, socket, head, (ws) => {
             // NOTE potential issue here if there is a delay in binding the listeners for the websocket
             this.emit("connection", ws, req, socketID, backend);
           });
         });
-        this.emit("upgrade", req, this.socketID);
+        this.emit("upgrade", req, socket, this.socketID);
       },
     });
   }

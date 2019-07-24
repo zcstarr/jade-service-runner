@@ -1,25 +1,29 @@
 import StrictEventEmitter from "strict-event-emitter-types/types/src";
 import { EventEmitter } from "ws";
-import { ResponseEvents, ConnectionEvents } from "./connectionManager";
+import { ResponseEvents, ConnectionEvents, DataResponse, HttpDataResponse, WSDataResponse } from "./connectionManager";
 import { IncomingMessage } from "http";
-import { Socket } from "net";
-import { Response } from "node-fetch";
 import WebSocket from "ws";
 import * as util from "./util";
 import { IncomingHttpHeaders } from "http2";
+import winston from "winston";
 
-export type ResponseBus = StrictEventEmitter<EventEmitter, ResponseEvents>;
+export type ResponseBus<T extends DataResponse> = StrictEventEmitter<EventEmitter, ResponseEvents<T>>;
 export type ConnectionBus = StrictEventEmitter<EventEmitter, ConnectionEvents>;
+
+export const connectionError = (statusCode: number, reason: string, error: Error, logger: winston.Logger) => {
+  logger.error(`statusCode: ${statusCode}, reason: ${reason}, stack: ${error.stack}`);
+  return { error, statusCode, reason };
+};
 
 export interface HttpConnectionSpec {
   "type": "http";
-  "res": ResponseBus;
+  "res": ResponseBus<HttpDataResponse>;
   "req": IncomingMessage;
 }
 
 export interface WsConnectionSpec {
   "type": "ws";
-  "res": ResponseBus;
+  "res": ResponseBus<WSDataResponse>;
   "req": IncomingMessage;
   "id": string;
 }
@@ -34,7 +38,7 @@ export interface WSConnection {
 
 export interface HttpConnect {
   send(data: any, headers: IncomingHttpHeaders, method: string): Promise<IncomingMessage>;
-  respond(data: any): void;
+  respond(data: HttpDataResponse): void;
 }
 
 export interface HttpConnection {

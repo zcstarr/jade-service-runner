@@ -265,18 +265,19 @@ export class ServiceProcessManager {
       await new Promise((resolve) => {
 
         const backOff = (n: number) => {
-          const timeout = Math.pow(2, n) * 500 + Math.random() * 1000;
+          const timeout = n === -1 ? 0 : Math.pow(2, n) * 500 + Math.random() * 1000;
+          logger.debug(`initial health check in ${timeout}ms ${terminalTimestamp} < ${Date.now()}`);
           setTimeout(async () => {
             const health = await this.checkServiceHealth(service);
-            if (health === false && terminalTimestamp < Date.now()) {
+            if (health === false && terminalTimestamp > Date.now()) {
               backOff(n + 1);
             } else {
-              resolve();
               logger.debug(`initialization health check complete: ${health}`);
+              resolve();
             }
           }, timeout);
         };
-        backOff(0);
+        backOff(-1);
       });
   }
 }

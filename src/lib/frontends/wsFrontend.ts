@@ -1,9 +1,11 @@
 import { Frontend } from "./types";
 import http, { Server, IncomingMessage } from "http";
+import net from "net";
 import { WebSocketProxyServer } from "../wsProxyServer";
 import { ResponseBus } from "../connection";
 import { EventEmitter } from "events";
 import WebSocket from "ws";
+import { WSDataResponse } from "../connectionManager";
 
 export const wsFrontend: Frontend = (connectionInfo, connectionBus) => {
 
@@ -11,10 +13,15 @@ export const wsFrontend: Frontend = (connectionInfo, connectionBus) => {
     const server = http.createServer();
     const wss = new WebSocketProxyServer({ server: server as Server });
 
-    // handle the upgarde event to start process for underlying service
-    wss.on("upgrade", (request, socketID) => {
-      const response: ResponseBus = new EventEmitter();
-      // handle the response from the underlying service
+    // handle the upgrade event to start process for underlying service
+    wss.on("upgrade", (request, socket, socketID) => {
+      const response: ResponseBus<WSDataResponse> = new EventEmitter();
+        // if the error happens attempting to connect to the service
+
+      response.on("terminateConnection", (error) => {
+        wss.emit("terminateConnection", error);
+      });
+
       response.on("established", (backend) => {
         wss.emit("upgraded", socketID, backend.conn);
       });
@@ -25,8 +32,8 @@ export const wsFrontend: Frontend = (connectionInfo, connectionBus) => {
     // Once the external service connection has been establish start accepting connections
     wss.on("connection", (socket: WebSocket, request: IncomingMessage, socketID: string, backend: WebSocket) => {
 
-      backend.on("error", () => {
-        socket.close();
+      backend.on("error", (data) => {
+        socket.emit("error", data);
       });
 
       backend.on("close", () => {
@@ -44,11 +51,6 @@ export const wsFrontend: Frontend = (connectionInfo, connectionBus) => {
         connectionBus.emit("request", { payload: data, protocol: "ws", uri: request.url, conn: backend });
       });
 
-      const response: ResponseBus = new EventEmitter();
-
-      // updates the connection to point to the current client facing websocket
-      // this.connectionBus.emit("updateConnection", { req: request, res: response, conn: socket, type: "ws", id: socketID });
-      // recieve data to send to dest
     });
     server.listen(connectionInfo.port);
     const teardown = (): Promise<void> => {

@@ -10,6 +10,7 @@ import _ from "lodash";
 import { MockWSDesc } from "fixtures/src/util";
 import { httpBackend } from "../backends/httpBackend";
 import fetch from "node-fetch";
+import { HttpDataResponse } from "../connectionManager";
 
 describe("Frontend allows for a connection", () => {
   let httpServiceServer: http.Server;
@@ -37,7 +38,7 @@ describe("Frontend allows for a connection", () => {
     const actualSeq: number[] = [];
     const testMessage = "TEST_MESSAGE";
     let backendClient: HttpConnection;
-    let connResponse: ResponseBus;
+    let connResponse: ResponseBus<HttpDataResponse>;
     await new Promise( async (resolve) => {
       const teardown = httpFrontend({ host: "localhost", port: tcpPort, protocol: "http" }, connectionBus);
       connectionBus.on("establish", async (data) => {
@@ -51,7 +52,8 @@ describe("Frontend allows for a connection", () => {
         if (data.protocol === "http") {
           const res = await backendClient.conn.send(data.payload.body, data.payload.headers, data.payload.method);
           res.on("data", (d) => {
-            connResponse.emit("response", d);
+            const {statusCode, headers, statusMessage} = res;
+            connResponse.emit("response", { headers, reason: "testreason", statusCode, payload: d });
           });
         }
       });
@@ -62,6 +64,10 @@ describe("Frontend allows for a connection", () => {
         method: "POST",
         body: JSON.stringify({ test: "payload" }),
       });
+      const r = await result.json();
+      expect(result.status).toEqual(200);
+      expect(result.statusText).toEqual("testreason");
+      expect(r.test).toEqual("payload");
       resolve();
     });
   });

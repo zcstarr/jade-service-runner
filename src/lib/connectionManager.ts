@@ -1,7 +1,7 @@
 import { StrictEventEmitter } from "strict-event-emitter-types";
 import { EventEmitter } from "events";
 import WebSocket from "ws";
-import { IncomingMessage, OutgoingMessage, IncomingHttpHeaders } from "http";
+import { IncomingMessage, OutgoingMessage, IncomingHttpHeaders, OutgoingHttpHeaders } from "http";
 import {Socket} from "net";
 import http, {Server} from "http";
 import { backendRegistry} from "./backends";
@@ -12,9 +12,9 @@ import { HttpConnect, ConnectionSpec, ConnectionBus, Connection, ConnectionInfo 
 type RequestSpec = WSRequestSpec | HttpRequestSpec;
 
 interface WSRequestSpec {
-  "payload": any;
+  payload: any;
   protocol: "ws";
-  "uri": string;
+  uri: string;
   conn: WebSocket;
 }
 
@@ -29,9 +29,29 @@ interface HttpRequestSpec {
   "uri": string;
 }
 
-export interface ResponseEvents {
-  "response": (data: any) => void;
+export interface HttpDataResponse {
+  headers: OutgoingHttpHeaders;
+  statusCode: number | undefined;
+  reason: string | undefined;
+  payload: any;
+}
+export interface WSDataResponse {
+  payload: any;
+}
+
+export type DataResponse = HttpDataResponse | WSDataResponse;
+
+export interface DataError {
+    error: Error;
+    reason: string;
+    statusCode: number;
+}
+
+export interface ResponseEvents<T extends DataResponse> {
+  "response": (data: T) => void;
   "established": (conn: Connection) => void;
+  "error": (data: DataError) => void;
+  "terminateConnection": (data: DataError) => void;
 }
 
 // Thing to note all of these events and connections will be scoped to the proper name etc...
@@ -41,15 +61,6 @@ export interface ConnectionEvents {
   request: (req: RequestSpec) => void; // internally router etc create a bound object to forward
   terminate: (connection: ConnectionSpec) => void;
 }
-
-const httpConnection = (connectionBus: ConnectionBus, connectionManager: ConnectionManager) => {
-  const handleRequest = (req: IncomingMessage, res: OutgoingMessage) => {
-    // connectionBus.emit("request", { payload: { req, res }, id: "0" });
-  };
-
-  const server = http.createServer(handleRequest);
-  server.listen(9997);
-};
 
 export class ConnectionManager {
   private base: Set<ConnectionInfo>;
@@ -84,8 +95,9 @@ export class ConnectionManager {
         return;
       case "http":
         const response = await request.conn.send(request.payload.body, request.payload.headers, request.payload.method);
+        const {statusCode, statusMessage, headers} = response;
         response.on("data", (data) => {
-          request.conn.respond(data);
+          request.conn.respond({ headers, statusCode, reason: statusMessage, payload: data });
         });
         return;
     }
@@ -93,17 +105,25 @@ export class ConnectionManager {
 
   public manageConnections() {
     this.connectionBus.on("establish", async (connectionSpec) => {
-      if (connectionSpec.req.url === undefined) {
-        throw new Error("Could not resolve url");
+      let routingInfo: ConnectionInfo;
+      try {
+        if (connectionSpec.req.url === undefined) {
+          throw new Error("Could not resolve url");
+        }
+        routingInfo = this.router.resolve(connectionSpec.req.url);
+      } catch (err) {
+        const error = err as Error;
+        connectionSpec.res.emit("terminateConnection", { statusCode: 404, error, reason: error.message });
+        return;
       }
-      const routingInfo = this.router.resolve(connectionSpec.req.url);
+
       let connection: Connection;
       switch (connectionSpec.type) {
         case "http":
           connection = await backendRegistry.http(routingInfo, connectionSpec.res);
           break;
         case "ws":
-          connection = await backendRegistry.ws(routingInfo);
+          connection = await backendRegistry.ws(routingInfo, connectionSpec.res);
           break;
         default:
           throw new Error("Could not resolve backend");
@@ -111,7 +131,6 @@ export class ConnectionManager {
       connectionSpec.res.emit("established", connection);
     });
     this.connectionBus.on("request", (request) => {
-      // PERMISSIONS CAN DO WHATEVER HERE IF YOU"D LIKE
       this.forwardRequest(request);
     });
   }
