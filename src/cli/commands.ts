@@ -3,11 +3,9 @@ import _ from "lodash";
 import { Config } from "../lib/config";
 import { makeLogger } from "../lib/logging";
 import { Command } from "commander";
-import { ServiceRunnerServer } from "../";
-import { ProxyServer } from "../lib/proxyServer";
-import { getAvailableTCPPort } from "../lib/util";
-import { Router } from "../lib/router";
 import { ConnectionInfo } from "../lib/connection";
+import { startServiceRunner } from "..";
+import { ServiceRunnerServer } from "../lib/serviceRunnerServer";
 const logger = makeLogger("ServiceRunner", "Commands");
 
 interface ParsedCommands {
@@ -33,26 +31,15 @@ const testConfiguration = async (extendedConfig: any) => {
   logger.info(`Configuration is valid!`);
 };
 
-const launchCommands = async ({port, dir, extendedConfig}: ParsedCommands) => {
-    const availablePort = await getAvailableTCPPort();
-    const serviceRunnerServer = new ServiceRunnerServer(extendedConfig, dir, `${availablePort}`);
-    const router = new Router(serviceRunnerServer.serviceManager.notifications);
-
+const launchCommands = async ({port, dir, extendedConfig}: ParsedCommands): Promise<ServiceRunnerServer> => {
     const connections = new Set<ConnectionInfo>([{ host: "localhost", port: parseInt(port, 10), protocol: "http" }]);
-    const proxy = new ProxyServer(connections, router);
-    logger.info(`Service Runner port starting on ${port}`);
-    logger.debug(`Service Runner internal port starting on ${availablePort}`);
-    await serviceRunnerServer.start();
-    proxy.addServiceRunner(availablePort);
-    const started = proxy.start();
-    logger.info(`Service Runner started on ${port}`);
-    return started;
+    return startServiceRunner(connections, dir, extendedConfig);
 };
 
-export const startServiceRunner = async (program: any): Promise<void> => {
+export const startServiceRunnerFromCLI = async (program: any): Promise<void> => {
   const commands = await parseCommands(program);
   if (commands.test) {
     return testConfiguration(commands.extendedConfig);
   }
-  return launchCommands(commands);
+  launchCommands(commands);
 };
