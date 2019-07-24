@@ -160,6 +160,14 @@ export class ServiceProcessManager {
     });
   }
 
+  public async checkServiceHealth(service: ActiveServiceSpec): Promise<boolean> {
+    if (service.health === undefined) {
+      return true;
+    }
+    const port = parseInt(service.health.port, 10);
+    return util.isUp(port, service.health.protocol);
+  }
+
   private handleConsoleEvent(event: events.ConsoleServiceEvent) {
     if (event.stderr) {
       logger.error(`stderr: ${event.stderr}`);
@@ -236,16 +244,42 @@ export class ServiceProcessManager {
     child.on("error", (err) => {
       this.notifications.emit({ name: "exit", error: err, code: -1, logger: childLogger, service });
     });
-    logger.info(`launched service ${service.name} version: ${service.version}  environment: ${service.env}`);
 
     service.process = child;
-    this.setServiceCacheEntry(service, "running");
+    const spec = this.setServiceCacheEntry(service, "running") as ActiveServiceSpec;
+    const retries = 5;
+    this.sendHealthEvent(service);
+    await this.initialHealthCheck(spec);
+    // Launch event is only emitted when the initial health check is verified if it exists
+    logger.info(`launched service ${service.name} version: ${service.version}  environment: ${service.env}`);
     service.notifications.emit("launched", service);
     // TODO require protocol needs protocol
     const {rpcPort, env, version, name } = service;
     this.externalNotifications.emit("launched", { protocol: "http", rpcPort, env, version, name });
-    this.sendHealthEvent(service);
   }
+
+  // An exponential backoff for initial service bootup that is bound by users health check params.
+  private async initialHealthCheck(service: ActiveServiceSpec) {
+    if (service.health) {
+      const terminalTimestamp = Date.now() + service.health.retries * service.health.interval;
+      await new Promise((resolve) => {
+
+        const backOff = (n: number) => {
+          const timeout = Math.pow(2, n) * 500 + Math.random() * 1000;
+          setTimeout(async () => {
+            const health = await this.checkServiceHealth(service);
+            if (health === false && terminalTimestamp < Date.now()) {
+              backOff(n + 1);
+            } else {
+              resolve();
+              logger.debug(`initialization health check complete: ${health}`);
+            }
+          }, timeout);
+        };
+        backOff(0);
+      });
+  }
+}
 
   private sendHealthEvent(service: ActiveServiceSpec, healthStatus?: Health) {
     const defaultHealth = { retries: 0, timestamp: Date.now()};
@@ -256,14 +290,6 @@ export class ServiceProcessManager {
       this.healthCache.set(process.pid, health);
       setTimeout(() => this.notifications.emit({ name: "health", service, logger }), service.health.interval);
     }
-  }
-
-  private async checkServiceHealth(service: ActiveServiceSpec): Promise<boolean> {
-    if (service.health === undefined) {
-      return true;
-    }
-    const port = parseInt(service.health.port, 10);
-    return util.isUp(port, service.health.protocol);
   }
 
   private async handleTerminateEvent(event: events.TerminateServiceEvent) {
@@ -363,21 +389,21 @@ export class ServiceProcessManager {
     });
   }
 
-private setServiceCacheEntry(service: ServiceSpec, status: ServiceStatus) {
+private setServiceCacheEntry(service: ServiceSpec, status: ServiceStatus): ActiveServiceSpec | ServiceSpec {
   if (status === "spec") {
     this.addServiceSpec(service);
-    return;
+    return service;
   }
   const activeService = service as ActiveServiceSpec;
   activeService.state = status;
   this.addActiveServiceSpec(activeService);
-  return;
+  return activeService;
 }
 
   private addServiceSpec(service: ServiceSpec) {
     const hash = this.serviceHash(service);
     if (this.serviceCache.has(hash)) {
-      return;
+      return service;
     }
     this.serviceCache.set(hash, service);
   }
