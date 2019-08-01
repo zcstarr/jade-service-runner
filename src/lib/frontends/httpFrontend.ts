@@ -47,8 +47,8 @@ const httpProxy = (connectionBus: ConnectionBus) => {
 
     responseBus.on("response", (data) => {
       logger.debug(`received response: ${JSON.stringify(data, null, 2)}`);
-      const statusCode = data.statusCode || 500;
-      response.writeHead(statusCode, data.reason, data.headers);
+      const status = data.statusCode || 500;
+      response.writeHead(status, data.reason, data.headers);
       response.write(data.payload);
       response.end(null);
     });
