@@ -1,3 +1,6 @@
+/**
+ * Contains error handling and error code mapping for commong json rpc errors
+ */
 export const PARSE_ERROR_CODE = -32700;
 export const INVALID_REQUEST_CODE = -32600;
 export const METHOD_NOT_FOUND_CODE = -32601;

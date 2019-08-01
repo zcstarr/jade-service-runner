@@ -25,7 +25,7 @@ describe("WebSocketProxy Proxies ws request", () => {
     server.close();
   });
 
-  it.only("can send and receive messages", async () => {
+  it("can send and receive messages", async () => {
     const TEST_MESSAGE = "test-message";
     const server = new WebSocketProxyServer({ server: httpServer });
 

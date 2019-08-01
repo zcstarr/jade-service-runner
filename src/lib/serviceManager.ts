@@ -21,24 +21,6 @@ const logger = makeLogger("ServiceRunner", "ServiceManager");
 /*
  * ServiceManager provide a high level interface, to launch and list running services from.
 */
-type ServiceNotifications = NewServiceNotification | TerminatedServiceNotification;
-
-interface ServiceNotification {
-  env: string;
-  version: string;
-  name: string;
-  rpcPort: string;
-  protocol: string;
-}
-
-interface NewServiceNotification extends ServiceNotification {
-  type: "newService";
-}
-
-interface TerminatedServiceNotification extends ServiceNotification {
-  type: "terminatedService";
-}
-
 export class ServiceManager {
 
   public repo: Repo;

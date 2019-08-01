@@ -6,10 +6,25 @@ import { EventEmitter } from "events";
 import { makeLogger } from "./logging";
 import { JSONRpcError } from "./jsonRpcError";
 const logger = makeLogger("ServiceRunner", "WebSocketProxyServer");
+
 interface ServerReq {
   server: http.Server | https.Server;
 }
+
 type ServerOptions = WebSocket.ServerOptions & ServerReq;
+
+/**
+ * WebSocketProxyServer - extends websocket server to support a pattern for dynamically creating a connection
+ * to a 3rd different server
+ * ### Initialization Lifecycle
+ * **websocket conn upgrade** => **emit custom upgrade**
+ * => **frontend emit established** => **backend is created and returned** => **frontend emits upgraded**
+ * => **proxy server accepts upgrade request** => **emits connection with backend to connect to**
+ * => **backend used for communication**
+ * ### Bad initial request lifecycle (bad path or unknown error)
+ *  **connection manager issues temrinatecConnection** => **initial connection is accepted**
+ *  => **immediately closed with a reason**
+ */
 export class WebSocketProxyServer extends WebSocket.Server {
 
   private socketID: number;

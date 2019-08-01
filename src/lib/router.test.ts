@@ -1,7 +1,6 @@
 import { Router } from "./router";
 import * as events from "./events";
 import { EventEmitter } from "events";
-import templateBuilder from "@babel/template";
 
 describe("Should test router", () => {
   let router: Router;

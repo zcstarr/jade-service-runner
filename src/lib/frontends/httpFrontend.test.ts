@@ -3,14 +3,12 @@ import { AddressInfo } from "net";
 import http from "http";
 import { HttpConnection, ConnectionBus, ResponseBus } from "../connection";
 import { httpFrontend } from "./httpFrontend";
-import { getFreePorts, getAvailableTCPPort } from "../util";
-import { ExternalServiceNotificationEvents, ExternalServiceNotifications } from "../events";
+import { getAvailableTCPPort } from "../util";
 import { EventEmitter } from "events";
 import _ from "lodash";
-import { MockWSDesc } from "fixtures/src/util";
 import { httpBackend } from "../backends/httpBackend";
 import fetch from "node-fetch";
-import { HttpDataResponse } from "../connectionManager";
+import { HttpDataResponse } from "../connection";
 
 describe("Frontend allows for a connection", () => {
   let httpServiceServer: http.Server;
@@ -33,10 +31,7 @@ describe("Frontend allows for a connection", () => {
     const connectionBus: ConnectionBus = new EventEmitter();
     const ESTABLISH = 1;
     const REQUEST = 2;
-    const RESPONSE = 3;
-    const testSeq = [ESTABLISH, REQUEST, RESPONSE];
     const actualSeq: number[] = [];
-    const testMessage = "TEST_MESSAGE";
     let backendClient: HttpConnection;
     let connResponse: ResponseBus<HttpDataResponse>;
     await new Promise( async (resolve) => {
@@ -52,7 +47,7 @@ describe("Frontend allows for a connection", () => {
         if (data.protocol === "http") {
           const res = await backendClient.conn.send(data.payload.body, data.payload.headers, data.payload.method);
           res.on("data", (d) => {
-            const {statusCode, headers, statusMessage} = res;
+            const {statusCode, headers} = res;
             connResponse.emit("response", { headers, reason: "testreason", statusCode, payload: d });
           });
         }

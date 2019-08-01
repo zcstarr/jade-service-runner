@@ -35,7 +35,10 @@ const launchCommands = async ({port, dir, extendedConfig}: ParsedCommands): Prom
     const connections = new Set<ConnectionInfo>([{ host: "localhost", port: parseInt(port, 10), protocol: "http" }]);
     return startServiceRunner(connections, dir, extendedConfig);
 };
-
+/**
+ * startServiceRunnerFromCLI launches the service runner with command line arguments
+ * @param program - are the commandline arguments
+ */
 export const startServiceRunnerFromCLI = async (program: any): Promise<void> => {
   const commands = await parseCommands(program);
   if (commands.test) {

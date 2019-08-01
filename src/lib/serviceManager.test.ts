@@ -135,7 +135,7 @@ describe("ServiceManager", () => {
     }
   }, 10000);
 
-  it.only("should handle health check failure and reboot service", async () => {
+  it("should handle health check failure and reboot service", async () => {
     // The health check sequence should result in a successful run then failure and reboot
 
     const healthSeq = [true, true, true, false, false, true];

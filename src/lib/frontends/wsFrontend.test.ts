@@ -1,11 +1,9 @@
 import { mockWSServer } from "../../../fixtures/src/util";
 import { AddressInfo } from "net";
-import http from "http";
 import WebSocket from "ws";
-import { WSConnection, ConnectionBus } from "../connection";
+import { ConnectionBus } from "../connection";
 import { wsFrontend } from "./wsFrontend";
-import { getFreePorts, getAvailableTCPPort } from "../util";
-import { ExternalServiceNotificationEvents, ExternalServiceNotifications } from "../events";
+import { getAvailableTCPPort } from "../util";
 import { EventEmitter } from "events";
 import _ from "lodash";
 import { MockWSDesc } from "fixtures/src/util";

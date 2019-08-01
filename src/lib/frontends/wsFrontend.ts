@@ -2,11 +2,16 @@ import { Frontend } from "./types";
 import http, { Server, IncomingMessage } from "http";
 import net from "net";
 import { WebSocketProxyServer } from "../wsProxyServer";
-import { ResponseBus } from "../connection";
+import { WSDataResponse, ResponseBus } from "../connection";
 import { EventEmitter } from "events";
 import WebSocket from "ws";
-import { WSDataResponse } from "../connectionManager";
-
+/**
+ *
+ * wsFrontend - is the external facing entry to connect to all websocket based services
+ * @param connectionInfo - specifies how the external facing websocket server should be setup
+ * @param connectionBus - a channel/queue that routes information about the status of incoming connections,
+ * and allows request to be forwarded to backend services
+ */
 export const wsFrontend: Frontend = (connectionInfo, connectionBus) => {
 
     // setup the websocket server with additional handling

@@ -8,6 +8,15 @@ interface RoutingInfo {
   protocol: util.Protocol;
 }
 const logger = makeLogger("ServiceRunner", "Router");
+/**
+ * Router - is the class that routes services via /serviceName/enviornment/version pattern
+ * the pattern can be made to be dynamic ini future by extending the resolution functoin to support
+ * fuzzy paths.
+ * ### LifeCycle
+ *  **LaunchServiceNotification** => Adds service to routing table
+ *  **TerminatedSErviceNotification** => Removes service from routing table
+ *
+ */
 export class Router {
 
   public table: Map<string, RoutingInfo>;
@@ -19,7 +28,10 @@ export class Router {
     this.serviceNotifications.on("launched", this.handleNewService.bind(this));
     this.serviceNotifications.on("terminated", this.handleTerminatedService.bind(this));
   }
-
+/**
+ * handleNewService - adds service to routing table
+ * @param event - details what new service was started
+ */
   public handleNewService(event: events.ExternalServiceNotification) {
     const { protocol, rpcPort } = event;
     logger.debug(`new service event ${JSON.stringify(event, null, 2)}`);
@@ -31,7 +43,10 @@ export class Router {
         return;
     }
   }
-
+ /**
+  * handleTermiantedService - removes service from routing table
+  * @param event - details what new service was terminated
+  */
   public handleTerminatedService(event: events.ExternalServiceNotification) {
     const { protocol, rpcPort } = event;
     logger.debug(`terminate service event ${JSON.stringify(event, null, 2)}`);
@@ -43,7 +58,10 @@ export class Router {
         return;
     }
   }
-
+  /**
+   * resolve - resolves url paths into their corresponding services
+   * @param url - the request url made by client
+   */
   public resolve(url: string): RoutingInfo {
     // TODO should handle dynamic routing for /serviceName/environment/version
     const route = this.table.get(url);

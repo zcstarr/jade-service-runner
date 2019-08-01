@@ -1,6 +1,5 @@
 import { startServiceRunner } from "..";
 import { getAvailableTCPPort } from "../lib/util";
-import { mkdtemp } from "fs-extra";
 import { simpleMathConfig} from "../../fixtures/src/testService/extended_config";
 import path from "path";
 import yazl from "yazl";
@@ -75,7 +74,6 @@ describe("API integration Test", () => {
       },
     });
     const result = await sm.addition(2, 2);
-    // tslint:disable-next-line:no-console
     expect(result).toEqual(4);
   });
 
@@ -95,10 +93,9 @@ describe("API integration Test", () => {
     } catch (e) {
       expect(e.code).toEqual(-32601);
     }
-    // tslint:disable-next-line:no-console
   });
 
-  // NOTE test is not accurate needs clientjs to implement onclose
+  // NOTE test is not accurate needs clientjs to implement onclose and onerror
   it("should return an error with ws connection", async () => {
     await serviceRunner.installer.install("simple-math", "1.0.0");
     const spec = await serviceRunner.serviceManager.startService("simple-math", "1.0.0", "ws");

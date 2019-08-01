@@ -12,6 +12,11 @@ import { HandleFunction } from "connect";
 
 import openRPCDoc from "../../openrpc.json";
 const openRPC = openRPCDoc as OpenRPC;
+/**
+ * ServiceRunnerServer - is an encapsulation of the core service runner functionality
+ * It instantiates the service runner server. The service runner server itself is run
+ * behind the ProxyServer, from the "/" route
+ */
 export class ServiceRunnerServer {
 
   public config: Config;
@@ -28,6 +33,9 @@ export class ServiceRunnerServer {
     this.port = port;
   }
 
+  /**
+   * start - Launches the service runner
+   */
   public async start() {
     await this.repo.init();
     const methodMapping = methods(this.installer, this.serviceManager);

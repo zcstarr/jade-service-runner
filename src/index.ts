@@ -8,8 +8,13 @@ import { ConnectionInfo } from "./lib/connection";
 export * from "./lib/connection";
 export * from "./lib/serviceRunnerServer";
 const logger = makeLogger("ServiceRunner", "startServiceRunner");
-
-export const startServiceRunner = async (connections: Set<ConnectionInfo>, dir: string, extendedConfig: object): Promise<ServiceRunnerServer> => {
+/**
+ *
+ * @param connections - set of connections for each protocol to set the external facing ports to connect with
+ * @param dir - where services should live
+ * @param extendedConfig - optional extended configuration
+ */
+export const startServiceRunner = async (connections: Set<ConnectionInfo>, dir: string, extendedConfig?: object): Promise<ServiceRunnerServer> => {
     const availablePort = await getAvailableTCPPort();
     const serviceRunnerServer = new ServiceRunnerServer(extendedConfig, dir, `${availablePort}`);
     const router = new Router(serviceRunnerServer.serviceManager.notifications);

@@ -1,15 +1,12 @@
 import { httpBackend } from "./httpBackend";
 import { mockServer } from "../../../fixtures/src/util";
 import { AddressInfo } from "net";
-import fetch from "node-fetch";
 import http from "http";
-import { WSConnection } from "../connection";
-import { resolve } from "mz/dns";
 import { EventEmitter } from "events";
 describe("Backend returns valid connecion", () => {
   let server: http.Server;
   beforeAll(async () => {
-   server = await mockServer("");
+    server = await mockServer("");
   });
 
   afterAll((done) => {

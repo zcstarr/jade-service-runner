@@ -1,12 +1,11 @@
 import { Frontend } from "./types";
-import http, { Server, IncomingMessage } from "http";
-import { ResponseBus, ConnectionBus } from "../connection";
+import http from "http";
+import { HttpDataResponse, ResponseBus, ConnectionBus } from "../connection";
 import { EventEmitter } from "events";
 import connect from "connect";
 import { json as jsonParser } from "body-parser";
 import { JSONRpcError, statusCode } from "../jsonRpcError";
 import { makeLogger } from "../logging";
-import { HttpDataResponse, DataError } from "../connectionManager";
 const logger = makeLogger("ServiceRunner", "httpFrontend");
 
 const httpClientError = (jsonError: JSONRpcError, response: http.ServerResponse) => {
@@ -15,7 +14,12 @@ const httpClientError = (jsonError: JSONRpcError, response: http.ServerResponse)
       response.write(JSON.stringify(jsonError));
       response.end();
 };
-
+/**
+ * httpProxy - proxies http request, binding request to an http server and forwarding request to underlying
+ * services using the connectionBus
+ * @param connectionBus - a message queue that provides information about incoming connections, and allows
+ *  for forwarding request.
+ */
 const httpProxy = (connectionBus: ConnectionBus) => {
   return (req: any, response: http.ServerResponse) => {
     const responseBus: ResponseBus<HttpDataResponse> = new EventEmitter();
@@ -55,7 +59,12 @@ const httpProxy = (connectionBus: ConnectionBus) => {
   };
 
 };
-
+/**
+ * httpFronted - is a frontend used to receive all http request and forward them to backend services;
+ * @param connectionInfo - dictates how the http server should accept connections
+ * @param connectionBus - a channel/queue that allows for forwarding request, and receiving information about
+ *  connections
+ */
 export const httpFrontend: Frontend = (connectionInfo, connectionBus) => {
   const app = connect();
   app.use(jsonParser());
