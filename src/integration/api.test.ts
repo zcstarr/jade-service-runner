@@ -79,7 +79,7 @@ describe("API integration Test", () => {
     expect(result).toEqual(4);
   });
 
-  it.only("should return an error with http connection", async () => {
+  it("should return an error with http connection", async () => {
     await serviceRunner.installer.install("simple-math", "1.0.0");
     const spec = await serviceRunner.serviceManager.startService("simple-math", "1.0.0", "http");
     const sm = new SimpleMath({
@@ -90,9 +90,12 @@ describe("API integration Test", () => {
         path: "/simple-math/http/Z.0.0",
       },
     });
-//    await sm.transport.connect();
-    const result = await sm.addition(2, 2);
-    console.log(result);
+    try {
+      await sm.addition(2, 2);
+    } catch (e) {
+      expect(e.code).toEqual(-32601);
+    }
+    // tslint:disable-next-line:no-console
   });
 
   // NOTE test is not accurate needs clientjs to implement onclose

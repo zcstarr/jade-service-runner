@@ -1,5 +1,5 @@
 import { testServer } from "./server";
-import { SimpleMath, simpleMathDoc } from "./client";
+import { SimpleMath} from "./client";
 import ws from "isomorphic-ws";
 import program, { Command } from "commander";
 program
@@ -15,7 +15,7 @@ program
   )
   .action(async () => {
     const port = parseInt(program.port, 10);
-    const server = testServer(port, program.mode, simpleMathDoc, {});
+    const server = testServer(port, program.mode, SimpleMath.openrpcDocument, {});
     console.log(`simplemath test server starting with ${program.mode} - ${program.port}` );
     server.start();
     console.log("simplemath test server started");

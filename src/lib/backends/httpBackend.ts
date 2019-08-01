@@ -1,5 +1,6 @@
 import { HttpConnection, ConnectionInfo, ResponseBus, connectionError } from "../connection";
 import http from "http";
+import * as jsonRpcErrors from "../jsonRpcError";
 import { makeLogger } from "../logging";
 import { HttpDataResponse } from "../connectionManager";
 const logger = makeLogger("ServiceRunner", "HttpBackend");
@@ -16,7 +17,13 @@ export const httpBackend = async (connectionInfo: ConnectionInfo, response: Resp
           resolve(res);
         });
         request.on("error", (err) => {
-          response.emit("error", connectionError(502, "Request failure", err, logger));
+          let id = 0;
+          // NOTE a client bug does not support null id on error
+          if (data) {
+            id = data.id || 0;
+          }
+          response.emit("error", connectionError(jsonRpcErrors.GATEWAY_ERROR, id, "Request failure", err, logger));
+          resolve();
         });
         request.write(JSON.stringify(data));
         request.end();

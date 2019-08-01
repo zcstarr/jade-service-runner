@@ -4,6 +4,7 @@ import https from "https";
 import { Socket } from "net";
 import { EventEmitter } from "events";
 import { makeLogger } from "./logging";
+import { JSONRpcError } from "./jsonRpcError";
 const logger = makeLogger("ServiceRunner", "WebSocketProxyServer");
 interface ServerReq {
   server: http.Server | https.Server;
@@ -23,10 +24,10 @@ export class WebSocketProxyServer extends WebSocket.Server {
       error: this.emit.bind(this, "error"),
       upgrade: (req: IncomingMessage, socket: Socket, head: Buffer) => {
         this.socketID++;
-        this.once("terminateConnection", (err) => {
+        this.once("terminateConnection", (err: JSONRpcError) => {
             this.handleUpgrade(req, socket, head, (ws) => {
-              logger.error(`terminating connection early: ${err.error.stack}`);
-              ws.close(4000 + err.statusCode, JSON.stringify(err));
+              logger.error(`terminating connection early`);
+              ws.close(4000, err.error.message);
             });
         });
         this.once("upgraded", (socketID, backend) => {

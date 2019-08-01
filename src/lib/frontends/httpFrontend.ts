@@ -4,29 +4,28 @@ import { ResponseBus, ConnectionBus } from "../connection";
 import { EventEmitter } from "events";
 import connect from "connect";
 import { json as jsonParser } from "body-parser";
+import { JSONRpcError, statusCode } from "../jsonRpcError";
 import { makeLogger } from "../logging";
 import { HttpDataResponse, DataError } from "../connectionManager";
 const logger = makeLogger("ServiceRunner", "httpFrontend");
 
-const httpClientError = (dataError: DataError, response: http.ServerResponse) => {
+const httpClientError = (jsonError: JSONRpcError, response: http.ServerResponse) => {
       response.setHeader("content-type", "application/json");
-      response.writeHead(200);
-      const { message } = dataError.error;
- //     response.write(JSON.stringify({error: { code: -32700, message: "haha", data: 2 }, ));
-      response.write(JSON.stringify({ "jsonrpc": "2.0", "error": { "code": -32600, "message": "Invalid Request" }, "id": null }));
-      response.end(null);
+      response.writeHead(statusCode(jsonError.error.code));
+      response.write(JSON.stringify(jsonError));
+      response.end();
 };
 
 const httpProxy = (connectionBus: ConnectionBus) => {
   return (req: any, response: http.ServerResponse) => {
     const responseBus: ResponseBus<HttpDataResponse> = new EventEmitter();
 
-    responseBus.on("terminateConnection", (dataError) => {
-      httpClientError(dataError, response);
+    responseBus.on("terminateConnection", (rpcError) => {
+      httpClientError(rpcError, response);
     });
 
-    responseBus.on("error", (dataError) => {
-      httpClientError(dataError, response);
+    responseBus.on("error", (rpcError) => {
+      httpClientError(rpcError, response);
     });
 
     responseBus.on("established", async (backend) => {

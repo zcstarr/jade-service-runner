@@ -6,13 +6,14 @@ import WebSocket from "ws";
 import * as util from "./util";
 import { IncomingHttpHeaders } from "http2";
 import winston from "winston";
+import * as jsonRpcError from "./jsonRpcError";
 
 export type ResponseBus<T extends DataResponse> = StrictEventEmitter<EventEmitter, ResponseEvents<T>>;
 export type ConnectionBus = StrictEventEmitter<EventEmitter, ConnectionEvents>;
 
-export const connectionError = (statusCode: number, reason: string, error: Error, logger: winston.Logger) => {
-  logger.error(`statusCode: ${statusCode}, reason: ${reason}, stack: ${error.stack}`);
-  return { error, statusCode, reason };
+export const connectionError = (message: string, id: number, reason: string, error: Error, logger: winston.Logger) => {
+  logger.error(`message: ${message}, reason: ${reason}, stack: ${error.stack}`);
+  return jsonRpcError.error(message, id, { reason });
 };
 
 export interface HttpConnectionSpec {

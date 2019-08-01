@@ -4,10 +4,13 @@ import WebSocket from "ws";
 import { IncomingMessage, OutgoingMessage, IncomingHttpHeaders, OutgoingHttpHeaders } from "http";
 import {Socket} from "net";
 import http, {Server} from "http";
+import * as jsonRpcErrors from "./jsonRpcError";
 import { backendRegistry} from "./backends";
 import { frontendRegistry} from "./frontends";
 import { Router } from "./router";
-import { HttpConnect, ConnectionSpec, ConnectionBus, Connection, ConnectionInfo } from "./connection";
+import { HttpConnect, ConnectionSpec, ConnectionBus, Connection, ConnectionInfo, connectionError } from "./connection";
+import {makeLogger} from "./logging";
+const logger = makeLogger("ServiceRunner", "ConnectionManager");
 
 type RequestSpec = WSRequestSpec | HttpRequestSpec;
 
@@ -50,8 +53,8 @@ export interface DataError {
 export interface ResponseEvents<T extends DataResponse> {
   "response": (data: T) => void;
   "established": (conn: Connection) => void;
-  "error": (data: DataError) => void;
-  "terminateConnection": (data: DataError) => void;
+  "error": (data: jsonRpcErrors.JSONRpcError) => void;
+  "terminateConnection": (data: jsonRpcErrors.JSONRpcError) => void;
 }
 
 // Thing to note all of these events and connections will be scoped to the proper name etc...
@@ -113,7 +116,8 @@ export class ConnectionManager {
         routingInfo = this.router.resolve(connectionSpec.req.url);
       } catch (err) {
         const error = err as Error;
-        connectionSpec.res.emit("terminateConnection", { statusCode: 404, error, reason: error.message });
+        const connectionErr = connectionError(jsonRpcErrors.METHOD_NOT_FOUND, 0, error.message, error, logger);
+        connectionSpec.res.emit("terminateConnection", connectionErr);
         return;
       }
 
